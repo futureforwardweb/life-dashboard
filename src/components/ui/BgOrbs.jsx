@@ -1,81 +1,43 @@
 import React, { useEffect, useRef, useMemo } from 'react'
 
-// Soft ambient orbs — mostly silvery with whisper-tints
-const ambientOrbs = [
-  {
-    style: {
-      width: '70vw', height: '70vw',
-      background: 'radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.05) 0%, rgba(184,174,240,0.06) 30%, transparent 65%)',
-      top: '-25vw', left: '-15vw',
-      animation: 'orbDrift 26s ease-in-out infinite',
-      filter: 'blur(80px)',
-    },
-  },
-  {
-    style: {
-      width: '50vw', height: '50vw',
-      background: 'radial-gradient(ellipse at 60% 60%, rgba(255,255,255,0.04) 0%, rgba(232,160,126,0.05) 35%, transparent 68%)',
-      bottom: '-12vw', right: '-10vw',
-      animation: 'orbDrift2 32s ease-in-out infinite',
-      filter: 'blur(85px)',
-    },
-  },
-  {
-    style: {
-      width: '36vw', height: '36vw',
-      background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.04) 0%, rgba(143,199,194,0.04) 40%, transparent 70%)',
-      top: '40%', left: '50%',
-      animation: 'orbDrift 38s ease-in-out infinite reverse',
-      animationDelay: '-10s',
-      filter: 'blur(90px)',
-    },
-  },
-]
+/* ─────────────────────────────────────────────────────────────────────────────
+   CHROME SPHERES — physically-modelled metallic orbs.
+   Each orb has its own drift rhythm, scale rhythm, and specular-rotation rhythm
+   so the scene never visibly loops. No two timings share a value.
+───────────────────────────────────────────────────────────────────────────── */
 
-// Chrome metallic spheres — solid, reflective, NOT blurred (foreground accents)
-const chromeSpheres = [
-  { size: 80,  top: '8%',  right: '6%',  delay: '0s',     duration: '18s' },
-  { size: 56,  top: '70%', left: '4%',   delay: '-4s',    duration: '22s' },
-  { size: 110, bottom: '8%', right: '14%', delay: '-8s',  duration: '26s' },
-  { size: 38,  top: '22%', left: '35%',  delay: '-12s',   duration: '20s' },
-  { size: 64,  top: '55%', right: '32%', delay: '-16s',   duration: '24s' },
+const SPHERES = [
+  // Enormous one bleeding off the top-left — the anchor of the scene.
+  { size: '78vmin', top:    '-22vmin', left:  '-18vmin', drift: 47, scale: 53, spec: 61, depth: 0.92, hue: 0.55 },
+  // Medium, lower-right
+  { size: '46vmin', bottom: '-10vmin', right: '-6vmin',  drift: 39, scale: 31, spec: 44, depth: 0.78, hue: 0.42 },
+  // Small, mid-screen, barely moves
+  { size: '22vmin', top:    '38%',     left:  '54%',     drift: 71, scale: 67, spec: 29, depth: 0.66, hue: 0.50 },
+  // Smaller accent, upper-right area
+  { size: '15vmin', top:    '12%',     right: '22%',     drift: 34, scale: 41, spec: 23, depth: 0.55, hue: 0.48 },
+  // Tiny, lower-left
+  { size: '11vmin', bottom: '18%',     left:  '14%',     drift: 56, scale: 37, spec: 19, depth: 0.62, hue: 0.46 },
 ]
-
-// Deterministic sparkle field
-function generateSparkles(count = 26) {
-  const seedRand = (i, off = 0) => {
-    const x = Math.sin(i * 999.137 + off) * 10000
-    return x - Math.floor(x)
-  }
-  return Array.from({ length: count }, (_, i) => ({
-    top: `${seedRand(i, 1) * 100}%`,
-    left: `${seedRand(i, 2) * 100}%`,
-    duration: 3 + seedRand(i, 3) * 5,
-    delay: seedRand(i, 4) * -8,
-    big: seedRand(i, 6) > 0.78,
-  }))
-}
 
 export default function BgOrbs() {
   const auraRef = useRef(null)
-  const sparkles = useMemo(() => generateSparkles(28), [])
 
+  // Cursor aura — soft pool of warmth that follows the mouse, with heavy easing.
   useEffect(() => {
     let raf = null
-    let targetX = window.innerWidth / 2
-    let targetY = window.innerHeight / 2
-    let currentX = targetX
-    let currentY = targetY
+    let tx = window.innerWidth / 2
+    let ty = window.innerHeight / 2
+    let cx = tx, cy = ty
 
-    const onMove = (e) => { targetX = e.clientX; targetY = e.clientY }
-    const onLeave = () => { targetX = window.innerWidth / 2; targetY = window.innerHeight / 2 }
+    const onMove = (e) => { tx = e.clientX; ty = e.clientY }
+    const onLeave = () => { tx = window.innerWidth / 2; ty = window.innerHeight / 2 }
 
     const tick = () => {
-      currentX += (targetX - currentX) * 0.08
-      currentY += (targetY - currentY) * 0.08
+      cx += (tx - cx) * 0.06
+      cy += (ty - cy) * 0.06
       if (auraRef.current) {
-        auraRef.current.style.setProperty('--mouse-x', `${currentX}px`)
-        auraRef.current.style.setProperty('--mouse-y', `${currentY}px`)
+        auraRef.current.style.setProperty('--mx', `${cx}px`)
+        auraRef.current.style.setProperty('--my', `${cy}px`)
       }
       raf = requestAnimationFrame(tick)
     }
@@ -92,57 +54,45 @@ export default function BgOrbs() {
 
   return (
     <>
-      {/* Ambient orbs — deep, soft, almost monochrome */}
-      <div className="bg-orbs">
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse 100% 60% at 50% 0%, rgba(255,255,255,0.03) 0%, transparent 50%)',
-          pointerEvents: 'none',
-        }} />
-        {ambientOrbs.map((o, i) => (
-          <div key={i} className="orb" style={o.style} />
-        ))}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse 100% 100% at 50% 50%, transparent 35%, rgba(5,5,8,0.7) 100%)',
-          pointerEvents: 'none',
-        }} />
-      </div>
+      {/* Background canvas — near-black with subtle blue-black warmth, no gradient.
+          All scene light comes from the orbs, not the sky. */}
+      <div className="bg-canvas" />
 
-      {/* Chrome spheres — metallic accents */}
-      <div className="bg-orbs" style={{ overflow: 'visible' }}>
-        {chromeSpheres.map((s, i) => (
+      {/* Vignette — pulls focus toward the centre */}
+      <div className="bg-vignette" />
+
+      {/* Chrome spheres */}
+      <div className="bg-orbs">
+        {SPHERES.map((s, i) => (
           <div
             key={i}
-            className="chrome-sphere"
+            className="chrome-orb"
             style={{
               width: s.size, height: s.size,
               top: s.top, left: s.left, right: s.right, bottom: s.bottom,
-              animation: `chromeFloat ${s.duration} ease-in-out infinite`,
-              animationDelay: s.delay,
+              '--drift-dur': `${s.drift}s`,
+              '--scale-dur': `${s.scale}s`,
+              '--spec-dur':  `${s.spec}s`,
+              '--depth':     s.depth,
+              '--hue':       s.hue,
+              animationDelay: `${-i * 3.7}s, ${-i * 5.1}s`,
             }}
-          />
+          >
+            {/* Subsurface bloom — the faintest halo, like the orb is gently glowing from inside */}
+            <div className="chrome-orb__bloom" />
+            {/* The sphere body itself — chrome gradient + specular highlight */}
+            <div className="chrome-orb__body" />
+            {/* Cast shadow beneath — gives weight, like it's resting on something */}
+            <div className="chrome-orb__shadow" />
+          </div>
         ))}
       </div>
 
-      {/* Sparkle field */}
-      <div className="sparkles">
-        {sparkles.map((s, i) => (
-          <div
-            key={i}
-            className={`sparkle${s.big ? ' lg' : ''}`}
-            style={{
-              top: s.top,
-              left: s.left,
-              animationDuration: `${s.duration}s`,
-              animationDelay: `${s.delay}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Cursor aura */}
+      {/* Cursor aura — silver pool, follows the mouse */}
       <div ref={auraRef} className="cursor-aura" />
+
+      {/* Grain — barely-perceptible texture so nothing reads as plastic */}
+      <div className="grain" aria-hidden="true" />
     </>
   )
 }
